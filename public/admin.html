@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#09090b">
+<title>Своя игра — Пульт админа</title>
+<link rel="stylesheet" href="/shared.css">
+<style>
+  :root {
+    --bg: #09090b;
+    --surface: #18181b;
+    --surface-card: rgba(24, 24, 27, 0.75);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-subtle: rgba(255, 255, 255, 0.04);
+    --text: #fafafa;
+    --text-muted: #a1a1aa;
+    --text-faint: #52525b;
+    --glow: rgba(34, 197, 94, 0.25);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% -10%, rgba(34, 197, 94, 0.15), transparent 70%),
+      radial-gradient(ellipse 40% 30% at 90% 90%, rgba(34, 197, 94, 0.05), transparent 50%),
+      radial-gradient(ellipse 30% 25% at 10% 80%, rgba(34, 197, 94, 0.03), transparent 50%);
+  }
+
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.25;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 20%, transparent 75%);
+  }
+
+  /* ── Header ── */
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(9, 9, 11, 0.8);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+  }
+
+  .header-brand {
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  .logo-mark svg, .join-icon svg {
+    width: 22px; height: 22px;
+    display: block;
+  }
+
+  .logo-mark {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--green-500), var(--green-700));
+    display: grid; place-items: center;
+    box-shadow: 0 4px 12px var(--glow);
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 17px; font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--text);
+  }
+
+  .header-sub {
+    font-size: 12px; font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  #restartBtn {
+    font-family: var(--font);
+    background: linear-gradient(135deg, var(--green-500), var(--green-600));
+    color: #fff;
+    border: none;
+    padding: 12px 22px;
+    font-size: 14px; font-weight: 700;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: all 0.15s var(--ease-spring);
+    box-shadow: 0 4px 12px var(--glow);
+    white-space: nowrap;
+  }
+  #restartBtn svg {
+    width: 16px; height: 16px;
+    flex-shrink: 0;
+  }
+  #restartBtn:hover {
+    background: linear-gradient(135deg, var(--green-400), var(--green-500));
+    box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+  }
+  #restartBtn:active { transform: scale(0.97); }
+
+  /* ── Layout ── */
+  main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 24px 20px 48px;
+    display: flex; flex-direction: column; gap: 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .status-panel {
+    background: var(--surface-card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    text-align: center;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+
+  #roundInfo {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+  }
+
+  #winnerBox {
+    font-size: clamp(22px, 4vw, 32px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.25;
+    color: var(--text-muted);
+    transition: color 0.25s;
+  }
+
+  #winnerBox.has-winner {
+    color: var(--green-400);
+    text-shadow: 0 0 16px rgba(34, 197, 94, 0.2);
+  }
+  #winnerBox.has-winner::before {
+    content: '🏆';
+    display: block;
+    font-size: 38px;
+    margin-bottom: 8px;
+    animation: winScale 0.4s var(--ease-spring) both;
+  }
+
+  #winnerBox.waiting {
+    color: var(--green-400);
+  }
+  #winnerBox.waiting::before {
+    content: '';
+    display: block;
+    width: 12px; height: 12px;
+    background: var(--green-500);
+    border-radius: 50%;
+    margin: 0 auto 16px;
+    animation: blink 1.4s ease-in-out infinite;
+    box-shadow: 0 0 12px var(--green-500);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface-card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    min-width: 0;
+  }
+
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .card h2 {
+    margin: 0;
+    font-size: 14px; font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+
+  .card-badge {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+  }
+
+  /* ── Teams table ── */
+  .table-wrap { overflow-x: auto; margin: 0 -4px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+
+  th {
+    text-align: left;
+    padding: 0 10px 10px;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+  th:last-child { text-align: right; }
+
+  td {
+    padding: 14px 10px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: middle;
+  }
+  td:last-child { text-align: right; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr { transition: background 0.12s; }
+  tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+  .team-cell {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 600;
+  }
+
+  .team-avatar {
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--green-400);
+    font-size: 13px; font-weight: 800;
+    display: grid; place-items: center;
+  }
+
+  .status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .online {
+    background: var(--green-500);
+    box-shadow: 0 0 6px var(--green-400);
+  }
+  .offline { background: #52525b; }
+
+  /* ── Score adjust ── */
+  .score-adjust-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .score-adjust-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+    color: var(--text-muted);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .score-adjust-btn:hover {
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+  }
+  .score-adjust-btn:active {
+    transform: scale(0.9);
+  }
+  .score-adjust-btn.plus:hover {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--green-400);
+    border-color: rgba(74, 222, 128, 0.3);
+  }
+  .score-adjust-btn.minus:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+  .score-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .score-pill.has-score {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--green-400);
+    border: 1px solid rgba(74, 222, 128, 0.2);
+  }
+
+  .removeBtn {
+    font-family: var(--font);
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 12px; font-weight: 600;
+    transition: all 0.15s;
+  }
+  .removeBtn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  .passBtn {
+    font-family: var(--font);
+    background: rgba(34, 197, 94, 0.08);
+    color: var(--green-400);
+    border: 1px solid rgba(74, 222, 128, 0.2);
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 12px; font-weight: 600;
+    margin-right: 6px;
+    transition: all 0.15s;
+  }
+  .passBtn:hover:not(:disabled) {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: var(--green-400);
+  }
+  .passBtn:disabled {
+    opacity: 0.25;
+    cursor: default;
+  }
+
+  .actions-cell {
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  /* ── History log ── */
+  .log-container {
+    max-height: 400px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+  }
+  .log-container::-webkit-scrollbar { width: 5px; }
+  .log-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+  }
+
+  .log-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+    background: rgba(255, 255, 255, 0.02);
+    transition: background 0.15s;
+  }
+  .log-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .log-item.win-row {
+    border-color: rgba(74, 222, 128, 0.15);
+    background: rgba(34, 197, 94, 0.03);
+  }
+  .log-item.win-row:hover {
+    background: rgba(34, 197, 94, 0.05);
+  }
+  .log-round {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+  .log-team {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+  }
+  .log-status {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+  .log-status.winner {
+    color: var(--green-400);
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.2);
+  }
+  .log-status.manual {
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+  }
+  .log-status.clicked {
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .empty {
+    color: var(--text-muted);
+    text-align: center;
+    padding: 40px 20px;
+    font-size: 14px; font-weight: 500;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ── Login ── */
+  #loginGate {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .login-card {
+    width: 100%; max-width: 360px;
+    background: var(--surface-card);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px 28px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    text-align: center;
+  }
+
+  .login-card h2 {
+    margin: 16px 0 6px;
+    font-size: 20px; font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .login-card p {
+    margin: 0 0 24px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  #loginForm {
+    display: flex; flex-direction: column; gap: 12px;
+  }
+
+  #passwordInput {
+    font-family: var(--font);
+    font-size: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: rgba(0,0,0,0.3);
+    color: var(--text);
+    outline: none;
+    text-align: center;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  #passwordInput:focus {
+    border-color: var(--green-500);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+  }
+
+  #loginForm button {
+    font-family: var(--font);
+    font-size: 15px; font-weight: 700;
+    padding: 14px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--green-600);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  #loginForm button:hover { background: var(--green-500); }
+
+  #loginError {
+    min-height: 20px;
+    font-size: 13px; font-weight: 600;
+    color: #dc2626;
+  }
+
+  .hidden { display: none !important; }
+
+  /* ── Toggle Switch ── */
+  .toggle-switch-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+  }
+  .toggle-switch-label:hover {
+    color: var(--text);
+  }
+  .toggle-slider {
+    position: relative;
+    width: 38px;
+    height: 20px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    transition: background-color 0.2s;
+  }
+  .toggle-slider::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    transition: transform 0.2s var(--ease-spring);
+  }
+  #sharedModeToggle:checked + .toggle-slider {
+    background: var(--green-600);
+  }
+  #sharedModeToggle:checked + .toggle-slider::after {
+    transform: translateX(18px);
+  }
+
+  /* ── Rename Button ── */
+  .renameBtn {
+    font-family: var(--font);
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 12px; font-weight: 600;
+    margin-right: 6px;
+    transition: all 0.15s;
+  }
+  .renameBtn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    border-color: var(--text-muted);
+  }
+
+  #renameInput:focus {
+    border-color: var(--green-500) !important;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+  }
+</style>
+</head>
+<body>
+
+<div id="loginGate">
+  <div class="login-card">
+    <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="7" stroke="#fff" stroke-width="2"/><circle cx="12" cy="13" r="3" fill="#fff"/><path d="M9.5 6.5C10.2 5.5 11 5 12 5s1.8.5 2.5 1.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <h2>Пульт администратора</h2>
+    <p>Введите пароль для входа</p>
+    <form id="loginForm">
+      <input id="passwordInput" type="password" placeholder="Пароль" autocomplete="off" required>
+      <button type="submit">Войти</button>
+      <div id="loginError"></div>
+    </form>
+  </div>
+</div>
+
+<div id="adminPanel" class="hidden">
+<header>
+  <div class="header-brand">
+    <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="7" stroke="#fff" stroke-width="2"/><circle cx="12" cy="13" r="3" fill="#fff"/><path d="M9.5 6.5C10.2 5.5 11 5 12 5s1.8.5 2.5 1.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <div>
+      <h1>Пульт администратора</h1>
+      <div class="header-sub">Своя игра</div>
+    </div>
+  </div>
+  <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
+    <label class="toggle-switch-label">
+      <input type="checkbox" id="sharedModeToggle" style="display: none;">
+      <span class="toggle-slider"></span>
+      <span>Выбор существующих команд</span>
+    </label>
+    <button id="restartBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>Новый раунд</button>
+  </div>
+</header>
+
+<main>
+  <section class="status-panel">
+    <div id="roundInfo">Раунд: —</div>
+    <div id="winnerBox" class="waiting">Ожидание рестарта...</div>
+  </section>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <h2>Команды</h2>
+        <span class="card-badge" id="teamCount">0</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Команда</th><th>Очки</th><th>Действия</th></tr>
+          </thead>
+          <tbody id="teamsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>История кликов</h2>
+      </div>
+      <div id="log"></div>
+    </div>
+  </div>
+</main>
+</div>
+
+<!-- Модальное окно переименования -->
+<div id="renameModal" class="hidden" style="position: fixed; inset: 0; background: rgba(9,9,11,0.6); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);">
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; width: 100%; max-width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+    <h3 style="margin: 0 0 6px; font-size: 16px; font-weight: 800; letter-spacing: -0.02em; color: var(--text);">Переименовать команду</h3>
+    <p style="margin: 0 0 16px; font-size: 13px; color: var(--text-muted); font-weight: 500;">Введите новое имя для команды</p>
+    <input type="text" id="renameInput" placeholder="Новое имя" style="width: 100%; font-family: var(--font); font-size: 15px; font-weight: 600; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); outline: none; background: rgba(0,0,0,0.3); color: var(--text); transition: border-color 0.2s;" autocomplete="off">
+    <div id="renameError" style="min-height: 18px; font-size: 12px; font-weight: 600; color: #dc2626; margin: 6px 0 12px;"></div>
+    <div style="display: flex; justify-content: flex-end; gap: 8px;">
+      <button id="cancelRenameBtn" style="font-family: var(--font); background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 16px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--text-muted); transition: color 0.15s;">Отмена</button>
+      <button id="saveRenameBtn" style="font-family: var(--font); background: var(--green-600); color: #fff; border: none; border-radius: var(--radius-sm); padding: 10px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s;">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  const loginGate = document.getElementById('loginGate');
+  const adminPanel = document.getElementById('adminPanel');
+  const loginForm = document.getElementById('loginForm');
+  const passwordInput = document.getElementById('passwordInput');
+  const loginError = document.getElementById('loginError');
+
+  const teamsBody = document.getElementById('teamsBody');
+  const roundInfo = document.getElementById('roundInfo');
+  const winnerBox = document.getElementById('winnerBox');
+  const logEl = document.getElementById('log');
+  const restartBtn = document.getElementById('restartBtn');
+  const teamCount = document.getElementById('teamCount');
+  
+  const sharedModeToggle = document.getElementById('sharedModeToggle');
+  const renameModal = document.getElementById('renameModal');
+  const renameInput = document.getElementById('renameInput');
+  const renameError = document.getElementById('renameError');
+  const cancelRenameBtn = document.getElementById('cancelRenameBtn');
+  const saveRenameBtn = document.getElementById('saveRenameBtn');
+
+  let activeRenameTeamId = null;
+
+  restartBtn.addEventListener('click', () => {
+    socket.emit('admin:restart');
+  });
+
+  sharedModeToggle.addEventListener('change', () => {
+    socket.emit('admin:toggleSharedMode', { enabled: sharedModeToggle.checked });
+  });
+
+  function openRenameModal(teamId, currentName) {
+    activeRenameTeamId = teamId;
+    renameInput.value = currentName;
+    renameError.textContent = '';
+    renameModal.classList.remove('hidden');
+    setTimeout(() => renameInput.focus(), 50);
+  }
+
+  function closeRenameModal() {
+    activeRenameTeamId = null;
+    renameModal.classList.add('hidden');
+  }
+
+  cancelRenameBtn.addEventListener('click', closeRenameModal);
+  
+  function submitRename() {
+    const newName = renameInput.value.trim();
+    if (!newName) {
+      renameError.textContent = 'Имя не может быть пустым';
+      return;
+    }
+    socket.emit('admin:renameTeam', { teamId: activeRenameTeamId, name: newName }, (res) => {
+      if (res.error) {
+        renameError.textContent = res.error;
+        return;
+      }
+      closeRenameModal();
+    });
+  }
+
+  saveRenameBtn.addEventListener('click', submitRename);
+  renameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitRename();
+    } else if (e.key === 'Escape') {
+      closeRenameModal();
+    }
+  });
+
+  renameModal.addEventListener('click', (e) => {
+    if (e.target === renameModal) closeRenameModal();
+  });
+
+  function initial(name) {
+    return (name.trim()[0] || '?').toUpperCase();
+  }
+
+  socket.on('admin:state', (data) => {
+    sharedModeToggle.checked = !!data.sharedTeamsMode;
+    roundInfo.textContent = 'Раунд №' + data.roundNumber + (data.roundActive ? ' · открыт' : ' · закрыт');
+    if (data.currentWinner) {
+      winnerBox.className = 'has-winner';
+      winnerBox.textContent = data.currentWinner.name;
+    } else if (data.roundActive) {
+      winnerBox.className = 'waiting';
+      winnerBox.textContent = 'Ждём нажатия...';
+    } else {
+      winnerBox.className = '';
+      winnerBox.textContent = 'Нажмите «Новый раунд»';
+    }
+
+    teamCount.textContent = data.teams.length;
+    const canPass = data.roundActive && !data.currentWinner;
+    teamsBody.innerHTML = '';
+    if (data.teams.length === 0) {
+      teamsBody.innerHTML = '<tr><td colspan="3" class="empty">Пока никто не подключился</td></tr>';
+    }
+    data.teams.forEach(t => {
+      const tr = document.createElement('tr');
+      const scoreClass = t.wins !== 0 ? 'score-pill has-score' : 'score-pill';
+      tr.innerHTML = `
+        <td>
+          <div class="team-cell">
+            <span class="status-dot ${t.connected ? 'online' : 'offline'}"></span>
+            <span class="team-avatar">${escapeHtml(initial(t.name))}</span>
+            <span>${escapeHtml(t.name)}</span>
+          </div>
+        </td>
+        <td>
+          <div class="score-adjust-container">
+            <button class="score-adjust-btn minus" data-id="${t.id}">−</button>
+            <span class="${scoreClass}">${t.wins}</span>
+            <button class="score-adjust-btn plus" data-id="${t.id}">+</button>
+          </div>
+        </td>
+        <td class="actions-cell">
+          <button class="passBtn" data-id="${t.id}" ${canPass ? '' : 'disabled'}>Дать ход</button>
+          <button class="renameBtn" data-id="${t.id}" data-name="${escapeHtml(t.name)}">Имя</button>
+          <button class="removeBtn" data-id="${t.id}">Убрать</button>
+        </td>
+      `;
+      teamsBody.appendChild(tr);
+    });
+    
+    // Bind score adjust buttons
+    teamsBody.querySelectorAll('.score-adjust-btn.plus').forEach(btn => {
+      btn.addEventListener('click', () => {
+        socket.emit('admin:adjustScore', { teamId: btn.dataset.id, change: 1 });
+      });
+    });
+    teamsBody.querySelectorAll('.score-adjust-btn.minus').forEach(btn => {
+      btn.addEventListener('click', () => {
+        socket.emit('admin:adjustScore', { teamId: btn.dataset.id, change: -1 });
+      });
+    });
+
+    teamsBody.querySelectorAll('.passBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        socket.emit('admin:passTurn', { teamId: btn.dataset.id });
+      });
+    });
+    teamsBody.querySelectorAll('.renameBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        openRenameModal(btn.dataset.id, btn.dataset.name);
+      });
+    });
+    teamsBody.querySelectorAll('.removeBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        socket.emit('admin:remove', { teamId: btn.dataset.id });
+      });
+    });
+
+    logEl.innerHTML = '';
+    if (data.clickLog.length === 0) {
+      logEl.innerHTML = '<div class="empty">Кликов ещё не было</div>';
+    } else {
+      const container = document.createElement('div');
+      container.className = 'log-container';
+      data.clickLog.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'log-item' + (c.isWinner ? ' win-row' : '');
+        
+        let badgeHtml = '';
+        if (c.isWinner) {
+          if (c.manual) {
+            badgeHtml = '<span class="log-status manual">Вручную</span>';
+          } else {
+            badgeHtml = '<span class="log-status winner">Выиграл</span>';
+          }
+        } else {
+          badgeHtml = '<span class="log-status clicked">Нажато</span>';
+        }
+
+        div.innerHTML = `
+          <span class="log-round">Раунд ${c.round}</span>
+          <div class="log-team">
+            <span class="team-avatar">${escapeHtml(initial(c.name))}</span>
+            <span>${escapeHtml(c.name)}</span>
+          </div>
+          ${badgeHtml}
+        `;
+        container.appendChild(div);
+      });
+      logEl.appendChild(container);
+    }
+  });
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function showAdmin() {
+    loginGate.classList.add('hidden');
+    adminPanel.classList.remove('hidden');
+  }
+
+  function showLogin(msg) {
+    loginGate.classList.remove('hidden');
+    adminPanel.classList.add('hidden');
+    if (msg) loginError.textContent = msg;
+  }
+
+  function tryLogin(password) {
+    loginError.textContent = '';
+    socket.emit('admin:join', { password }, (res) => {
+      if (res.error) {
+        sessionStorage.removeItem('admin_pw');
+        loginError.textContent = res.error;
+        passwordInput.value = '';
+        passwordInput.focus();
+        return;
+      }
+      sessionStorage.setItem('admin_pw', password);
+      showAdmin();
+    });
+  }
+
+  loginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    tryLogin(passwordInput.value);
+  });
+
+  socket.on('connect', () => {
+    const saved = sessionStorage.getItem('admin_pw');
+    if (saved) tryLogin(saved);
+  });
+</script>
+</body>
+</html>

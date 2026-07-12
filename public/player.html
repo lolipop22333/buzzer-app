@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#09090b">
+<title>Своя игра — Кнопка</title>
+<link rel="stylesheet" href="/shared.css">
+<style>
+  :root {
+    --bg: #09090b;
+    --surface: rgba(24, 24, 27, 0.72);
+    --surface-solid: #18181b;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-accent: rgba(74, 222, 128, 0.25);
+    --text: #fafafa;
+    --text-muted: #a1a1aa;
+    --glow: rgba(34, 197, 94, 0.35);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    overscroll-behavior: none;
+    user-select: none;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 70% 50% at 50% -20%, rgba(34, 197, 94, 0.22), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 100% 100%, rgba(34, 197, 94, 0.08), transparent 50%),
+      radial-gradient(ellipse 40% 30% at 0% 80%, rgba(34, 197, 94, 0.06), transparent 50%);
+  }
+
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.35;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+    background-size: 24px 24px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 20%, transparent 75%);
+  }
+
+  #app {
+    position: relative; z-index: 1;
+    min-height: 100dvh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: max(20px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom));
+  }
+
+  /* ── Join screen ── */
+  #joinForm {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 0; width: 100%; max-width: 400px;
+    padding: 36px 28px 32px;
+    background: var(--surface);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset, 0 24px 64px rgba(0,0,0,0.5);
+    animation: fadeUp 0.5s var(--ease-out) both;
+  }
+
+  .join-icon svg {
+    width: 28px; height: 28px;
+    display: block;
+  }
+
+  .join-icon {
+    width: 56px; height: 56px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--green-500), var(--green-700));
+    display: grid; place-items: center;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 24px var(--glow);
+  }
+
+  .brand {
+    font-size: 26px; font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 6px;
+  }
+  .brand span { color: var(--green-400); }
+
+  .join-hint {
+    margin: 0 0 28px;
+    font-size: 14px; font-weight: 500;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .field-label {
+    align-self: stretch;
+    font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  #joinForm input {
+    align-self: stretch;
+    font-family: var(--font);
+    font-size: 18px; font-weight: 600;
+    padding: 16px 18px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--text);
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    margin-bottom: 16px;
+  }
+  #joinForm input::placeholder { color: #52525b; font-weight: 500; }
+  #joinForm input:focus {
+    border-color: var(--green-500);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+  }
+
+  #joinForm button {
+    align-self: stretch;
+    font-family: var(--font);
+    font-size: 16px; font-weight: 700;
+    padding: 16px;
+    border-radius: var(--radius-md);
+    border: none;
+    background: var(--green-500);
+    color: #052e16;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s var(--ease-spring), box-shadow 0.2s;
+    box-shadow: 0 4px 20px var(--glow);
+  }
+  #joinForm button:hover { background: var(--green-400); }
+  #joinForm button:active { transform: scale(0.97); }
+
+  /* ── Game screen ── */
+  #game {
+    display: flex; flex-direction: column;
+    align-items: center;
+    width: 100%; max-width: 420px;
+    flex: 1; justify-content: center;
+    gap: 0;
+    animation: fadeUp 0.4s var(--ease-out) both;
+  }
+
+  .game-top {
+    width: 100%;
+    display: flex; justify-content: center;
+    margin-bottom: 32px;
+  }
+
+  #teamName {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 15px; font-weight: 600;
+    color: var(--text);
+    padding: 10px 18px 10px 14px;
+    background: var(--surface-solid);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #teamName::before {
+    content: '';
+    flex-shrink: 0;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green-500);
+    box-shadow: 0 0 8px var(--green-500);
+  }
+
+  .buzzer-stage {
+    position: relative;
+    display: grid; place-items: center;
+    margin-bottom: 32px;
+  }
+
+  .pulse-ring {
+    position: absolute;
+    width: min(80vw, 340px); height: min(80vw, 340px);
+    border-radius: 50%;
+    border: 2px solid var(--green-500);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .buzzer-stage:has(#buzzBtn.active) .pulse-ring {
+    animation: pulse 2s var(--ease-out) infinite;
+  }
+  .buzzer-stage:has(#buzzBtn.active) .pulse-ring:nth-child(2) {
+    animation-delay: 0.6s;
+  }
+
+  #buzzBtn {
+    position: relative; z-index: 1;
+    width: min(72vw, 300px); height: min(72vw, 300px);
+    border-radius: 50%;
+    border: none;
+    font-family: var(--font);
+    font-size: 24px; font-weight: 800;
+    letter-spacing: 0.06em;
+    color: #52525b;
+    cursor: default;
+    background: linear-gradient(160deg, #3f3f46 0%, #27272a 45%, #1c1c1f 100%);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.06) inset,
+      0 -1px 0 rgba(0,0,0,0.3) inset,
+      0 16px 32px rgba(0,0,0,0.45),
+      0 0 0 1px rgba(255,255,255,0.05);
+    transition:
+      transform 0.1s var(--ease-out),
+      color 0.3s,
+      background 0.3s,
+      box-shadow 0.3s;
+  }
+
+  #buzzBtn.active {
+    color: #fff;
+    cursor: pointer;
+    background: radial-gradient(circle at 38% 32%, #86efac 0%, var(--green-500) 40%, var(--green-700) 100%);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.25) inset,
+      0 -2px 0 rgba(0,0,0,0.2) inset,
+      0 20px 48px var(--glow),
+      0 0 80px rgba(34, 197, 94, 0.2),
+      0 0 0 1px rgba(74, 222, 128, 0.3);
+  }
+
+  #buzzBtn.active:active {
+    transform: scale(0.94);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.15) inset,
+      0 8px 24px var(--glow),
+      0 0 40px rgba(34, 197, 94, 0.15);
+  }
+
+  #status {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 44px;
+    padding: 10px 20px;
+    font-size: 15px; font-weight: 500;
+    color: var(--text-muted);
+    text-align: center; line-height: 1.45;
+    background: var(--surface-solid);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    width: 100%;
+    transition: background 0.25s, border-color 0.25s, color 0.25s;
+  }
+
+  #status.win {
+    color: var(--green-400);
+    font-weight: 700;
+    background: rgba(34, 197, 94, 0.08);
+    border-color: var(--border-accent);
+  }
+  #status.lose {
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.06);
+    border-color: rgba(239, 68, 68, 0.15);
+  }
+
+  .hidden { display: none !important; }
+
+  #existingTeamsContainer {
+    width: 100%;
+    margin-bottom: 20px;
+    animation: fadeUp 0.3s var(--ease-out) both;
+  }
+  #teamsList::-webkit-scrollbar { width: 5px; }
+  #teamsList::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+  }
+  .existing-team-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 14px 18px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s var(--ease-out);
+    text-align: left;
+    margin-bottom: 8px;
+  }
+  .existing-team-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--green-500);
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.15);
+  }
+  .existing-team-btn:active {
+    transform: scale(0.98);
+  }
+  .existing-team-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .existing-team-status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .existing-team-status.online {
+    background: var(--green-500);
+    box-shadow: 0 0 8px var(--green-400);
+  }
+  .existing-team-status.offline {
+    background: #52525b;
+  }
+  .existing-team-score {
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 3px 8px;
+    border-radius: var(--radius-full);
+    color: var(--text-muted);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%   { transform: scale(1);    opacity: 0.5; }
+    100% { transform: scale(1.35); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <form id="joinForm">
+    <div class="join-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="7" stroke="#fff" stroke-width="2"/><circle cx="12" cy="13" r="3" fill="#fff"/><path d="M9.5 6.5C10.2 5.5 11 5 12 5s1.8.5 2.5 1.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <div class="brand">Своя <span>игра</span></div>
+    <p class="join-hint">Подключитесь к викторине с телефона</p>
+
+    <div id="existingTeamsContainer" class="hidden">
+      <label class="field-label">Выберите существующую команду</label>
+      <div id="teamsList" style="max-height: 200px; overflow-y: auto; margin-bottom: 12px; padding-right: 4px;"></div>
+      <div style="text-align: center; color: var(--text-muted); font-size: 13px; margin: 16px 0 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">— или создайте новую —</div>
+    </div>
+
+    <label class="field-label" for="nameInput">Название команды</label>
+    <input id="nameInput" type="text" placeholder="Например, Знатоки" maxlength="40" autocomplete="off" required>
+    <button type="submit">Войти в игру</button>
+  </form>
+
+  <div id="game" class="hidden">
+    <div class="game-top">
+      <div id="teamName"></div>
+    </div>
+    <div class="buzzer-stage">
+      <div class="pulse-ring" aria-hidden="true"></div>
+      <div class="pulse-ring" aria-hidden="true"></div>
+      <button id="buzzBtn" disabled>ЖДИТЕ</button>
+    </div>
+    <div id="status"></div>
+  </div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  const joinForm = document.getElementById('joinForm');
+  const nameInput = document.getElementById('nameInput');
+  const nameInputLabel = document.querySelector('label[for="nameInput"]');
+  const game = document.getElementById('game');
+  const teamNameEl = document.getElementById('teamName');
+  const buzzBtn = document.getElementById('buzzBtn');
+  const statusEl = document.getElementById('status');
+  const existingTeamsContainer = document.getElementById('existingTeamsContainer');
+  const teamsList = document.getElementById('teamsList');
+
+  let myName = '';
+  let iAmWinner = false;
+
+  function setButtonState(roundActive, winnerName) {
+    statusEl.className = '';
+    if (winnerName) {
+      buzzBtn.disabled = true;
+      buzzBtn.classList.remove('active');
+      buzzBtn.textContent = 'СТОП';
+      if (winnerName === myName) {
+        statusEl.textContent = '✅ Вы ответили первым!';
+        statusEl.className = 'win';
+      } else {
+        statusEl.textContent = 'Отвечает: ' + winnerName;
+        statusEl.className = 'lose';
+      }
+    } else if (roundActive) {
+      buzzBtn.disabled = false;
+      buzzBtn.classList.add('active');
+      buzzBtn.textContent = 'ЖМИ!';
+      statusEl.textContent = 'Раунд открыт — жмите кнопку!';
+    } else {
+      buzzBtn.disabled = true;
+      buzzBtn.classList.remove('active');
+      buzzBtn.textContent = 'ЖДИТЕ';
+      statusEl.textContent = 'Ожидание начала раунда...';
+    }
+  }
+
+  function updateLobbyUI(sharedTeamsMode, teams) {
+    if (sharedTeamsMode) {
+      existingTeamsContainer.classList.remove('hidden');
+      nameInputLabel.textContent = 'Название новой команды';
+      nameInput.removeAttribute('required');
+      
+      teamsList.innerHTML = '';
+      if (teams.length === 0) {
+        teamsList.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 14px; padding: 12px; font-weight: 500;">Команд пока нет</div>';
+      } else {
+        teams.forEach(t => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'existing-team-btn';
+          btn.innerHTML = `
+            <div class="existing-team-info">
+              <span class="existing-team-status ${t.connected ? 'online' : 'offline'}"></span>
+              <span>${escapeHtml(t.name)}</span>
+            </div>
+            <span class="existing-team-score">${t.wins}</span>
+          `;
+          btn.addEventListener('click', () => {
+            joinExistingTeam(t.id);
+          });
+          teamsList.appendChild(btn);
+        });
+      }
+    } else {
+      existingTeamsContainer.classList.add('hidden');
+      nameInputLabel.textContent = 'Название команды';
+      nameInput.setAttribute('required', '');
+    }
+  }
+
+  function joinExistingTeam(teamId) {
+    socket.emit('player:join', { teamId }, (res) => {
+      if (res.error) { alert(res.error); return; }
+      myName = res.name;
+      localStorage.setItem('buzzer_teamId', res.teamId);
+      localStorage.setItem('buzzer_teamName', res.name);
+      joinForm.classList.add('hidden');
+      game.classList.remove('hidden');
+      teamNameEl.textContent = res.name;
+      setButtonState(res.roundActive, res.winnerName);
+    });
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  joinForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = nameInput.value.trim();
+    if (!name) return;
+    socket.emit('player:join', { name }, (res) => {
+      if (res.error) { alert(res.error); return; }
+      myName = name;
+      localStorage.setItem('buzzer_teamId', res.teamId);
+      localStorage.setItem('buzzer_teamName', name);
+      joinForm.classList.add('hidden');
+      game.classList.remove('hidden');
+      teamNameEl.textContent = name;
+      setButtonState(res.roundActive, res.winnerName);
+    });
+  });
+
+  buzzBtn.addEventListener('click', () => {
+    if (buzzBtn.disabled) return;
+    socket.emit('player:buzz');
+    buzzBtn.disabled = true;
+  });
+
+  socket.on('round:state', (data) => {
+    setButtonState(data.roundActive, data.winnerName);
+  });
+
+  socket.on('lobby:state', (data) => {
+    updateLobbyUI(data.sharedTeamsMode, data.teams);
+  });
+
+  socket.on('player:rename', (data) => {
+    myName = data.name;
+    localStorage.setItem('buzzer_teamName', data.name);
+    teamNameEl.textContent = data.name;
+  });
+
+  socket.on('player:kicked', () => {
+    localStorage.removeItem('buzzer_teamId');
+    localStorage.removeItem('buzzer_teamName');
+    alert('Администратор отключил вашу команду.');
+    location.reload();
+  });
+
+  socket.on('connect', () => {
+    socket.emit('player:getInitialState', (res) => {
+      if (res) {
+        updateLobbyUI(res.sharedTeamsMode, res.teams);
+      }
+    });
+
+    const savedId = localStorage.getItem('buzzer_teamId');
+    const savedName = localStorage.getItem('buzzer_teamName');
+    if (savedId && savedName) {
+      socket.emit('player:rejoin', { teamId: savedId }, (res) => {
+        if (res.error) {
+          localStorage.removeItem('buzzer_teamId');
+          localStorage.removeItem('buzzer_teamName');
+          return;
+        }
+        myName = res.name;
+        joinForm.classList.add('hidden');
+        game.classList.remove('hidden');
+        teamNameEl.textContent = res.name;
+        setButtonState(res.roundActive, res.winnerName);
+      });
+    }
+  });
+</script>
+</body>
+</html>
